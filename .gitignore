@@ -9,7 +9,6 @@
 
 # Node modules and dependency files
 /node_modules/
-/package-lock.json
 /yarn.lock
 
 # Environment files
@@ -21,6 +20,9 @@
 
 # TypeScript cache
 *.tsbuildinfo
+
+# Operating system files
+.DS_Store
 
 # Logs
 npm-debug.log*

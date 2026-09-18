@@ -1,0 +1,6 @@
+{
+    "sonarlint.connectedMode.project": {
+        "connectionId": "marosfillproject",
+        "projectKey": "MarosFillProject_seamless-infinite-scroll"
+    }
+}
