@@ -14,7 +14,7 @@ export class InfiniteListDirective {
   readonly itemCount = input.required<number>({ alias: 'sisInfiniteList' });
   readonly initialBatchSize = input(30, { alias: 'sisInitialBatchSize' });
   readonly batchSize = input(30, { alias: 'sisBatchSize' });
-  readonly progressThreshold = input(0.5, { alias: 'sisProgressThreshold' });
+  readonly progressThreshold = input(0.2, { alias: 'sisProgressThreshold' });
   readonly loading = input(false, { alias: 'sisLoading' });
   readonly disabled = input(false, { alias: 'sisDisabled' });
   readonly completed = input(false, { alias: 'sisCompleted' });

@@ -5,8 +5,8 @@ infinite list.
 
 Instead of observing an end-of-list sentinel, the library observes the rendered item at a
 configurable position in the latest appended batch. With an initial batch of 30 items and the
-default `0.5` progress threshold, item index 15 triggers the next request. If 20 more items are then
-appended, index 40 is the next trigger. The application can therefore load and append data in the
+default `0.2` progress threshold, item index 6 triggers the next request. If 20 more items are then
+appended, index 34 is the next trigger. The application can therefore load and append data in the
 background while the user is still moving through existing content. If fast scrolling has already
 moved past a newly selected trigger, the directive treats it as reached so loading continues
 without requiring the user to scroll backward.
@@ -63,7 +63,7 @@ import {
       [sisInfiniteList]="items().length"
       [sisInitialBatchSize]="30"
       [sisBatchSize]="20"
-      [sisProgressThreshold]="0.5"
+      [sisProgressThreshold]="0.2"
       [sisLoading]="loading()"
       [sisCompleted]="completed()"
       [sisRequestKey]="requestKey()"
@@ -102,9 +102,9 @@ When the list is empty, the directive emits one `initial` request with `sisIniti
 Subsequent trigger items emit `prefetch` requests with `sisBatchSize`.
 
 Trigger placement uses the actual increase in `sisInfiniteList` after the previous request, not the
-requested batch size. For example, when the item count increases from 70 to 90, the default `0.5`
-threshold selects index 80 (Item 81). If the application appends fewer items than requested, the
-trigger adjusts to the midpoint of that smaller batch.
+requested batch size. For example, when the item count increases from 70 to 90, the default `0.2`
+threshold selects index 74 (Item 75). If the application appends fewer items than requested, the
+trigger adjusts to the same relative position in that smaller batch.
 
 ## Scrollable container
 
@@ -133,7 +133,7 @@ Without `sisRoot`, the browser viewport is used.
 | `sisInfiniteList`          | required | Number of currently loaded items.                                      |
 | `sisInitialBatchSize`      |     `30` | Requested count for an empty list.                                     |
 | `sisBatchSize`             |     `30` | Requested count for subsequent prefetches.                             |
-| `sisProgressThreshold`     |    `0.5` | Position in the latest appended batch that triggers prefetch.          |
+| `sisProgressThreshold`     |    `0.2` | Position in the latest appended batch that triggers prefetch.          |
 | `sisLoading`               |  `false` | Prevents requests while an API call is active.                         |
 | `sisCompleted`             |  `false` | Permanently stops requests for the current list.                       |
 | `sisDisabled`              |  `false` | Temporarily disables requests and observation.                         |

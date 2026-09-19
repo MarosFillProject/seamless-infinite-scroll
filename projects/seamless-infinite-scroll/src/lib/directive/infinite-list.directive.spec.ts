@@ -94,7 +94,6 @@ function createRect(top: number, bottom: number): DOMRectReadOnly {
       [sisInfiniteList]="items().length"
       [sisInitialBatchSize]="initialBatchSize"
       [sisBatchSize]="batchSize"
-      [sisProgressThreshold]="progressThreshold"
       [sisLoading]="loading()"
       [sisCompleted]="completed()"
       [sisRequestKey]="requestKey()"
@@ -115,7 +114,6 @@ class TestHost {
 
   initialBatchSize = 30;
   batchSize = 20;
-  progressThreshold = 0.5;
 }
 
 describe('InfiniteListDirective', () => {
@@ -153,7 +151,7 @@ describe('InfiniteListDirective', () => {
     ]);
   });
 
-  it('observes the midpoint and requests the configured subsequent batch', async () => {
+  it('observes the default 20% position and requests the configured subsequent batch', async () => {
     fixture.detectChanges();
     await fixture.whenStable();
 
@@ -165,7 +163,7 @@ describe('InfiniteListDirective', () => {
     await fixture.whenStable();
 
     const observer = FakeIntersectionObserver.latest;
-    expect(observer?.observed?.textContent).toBe('15');
+    expect(observer?.observed?.textContent).toBe('6');
 
     observer?.trigger();
 
@@ -173,12 +171,12 @@ describe('InfiniteListDirective', () => {
       reason: 'prefetch',
       requestedCount: 20,
       loadedCount: 30,
-      triggerIndex: 15,
+      triggerIndex: 6,
     });
     expect(fixture.componentInstance.requests).toHaveLength(2);
   });
 
-  it('moves the trigger to the midpoint of the latest appended batch', async () => {
+  it('moves the trigger to 20% of the latest appended batch', async () => {
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.componentInstance.items.set(Array.from({ length: 30 }, (_, index) => index));
@@ -194,7 +192,7 @@ describe('InfiniteListDirective', () => {
     fixture.detectChanges();
     await fixture.whenStable();
 
-    expect(FakeIntersectionObserver.latest?.observed?.textContent).toBe('40');
+    expect(FakeIntersectionObserver.latest?.observed?.textContent).toBe('34');
   });
 
   it('uses the actual appended count when a batch is shorter than requested', async () => {
@@ -213,7 +211,7 @@ describe('InfiniteListDirective', () => {
     fixture.detectChanges();
     await fixture.whenStable();
 
-    expect(FakeIntersectionObserver.latest?.observed?.textContent).toBe('33');
+    expect(FakeIntersectionObserver.latest?.observed?.textContent).toBe('31');
   });
 
   it('requests another batch when the trigger is already above the root', async () => {
@@ -233,7 +231,7 @@ describe('InfiniteListDirective', () => {
       reason: 'prefetch',
       requestedCount: 20,
       loadedCount: 30,
-      triggerIndex: 15,
+      triggerIndex: 6,
     });
     expect(fixture.componentInstance.requests).toHaveLength(2);
   });

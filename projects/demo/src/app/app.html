@@ -2,12 +2,56 @@
   <p class="eyebrow">Angular headless utility</p>
   <h1>Seamless infinite scroll</h1>
   <p>
-    The next batch starts loading at the midpoint of the latest loaded batch, including when fast
+    The next batch starts loading after 20% of the latest loaded batch, including when fast
     scrolling has already passed it.
   </p>
 </header>
 
 <main>
+  <section class="example">
+    <div class="example-heading">
+      <div>
+        <p class="eyebrow">Element root</p>
+        <h2>Scrollable container</h2>
+      </div>
+      <button type="button" (click)="simulateFailure(containerList)">Fail next request</button>
+    </div>
+
+    <div
+      #scrollContainer
+      class="scroll-container"
+      [sisInfiniteList]="containerList.items().length"
+      [sisInitialBatchSize]="initialBatchSize"
+      [sisBatchSize]="batchSize"
+      [sisProgressThreshold]="progressThreshold"
+      [sisLoading]="containerList.loading()"
+      [sisCompleted]="containerList.completed()"
+      [sisRequestKey]="containerList.requestKey()"
+      [sisRoot]="scrollContainer"
+      (sisLoadMore)="loadContainerItems($event)"
+    >
+      @for (item of containerList.items(); track item.id; let index = $index) {
+        <article class="compact-item" [sisInfiniteListItem]="index">
+          <span>{{ item.id }}</span>
+          <strong>{{ item.title }}</strong>
+        </article>
+      }
+
+      @if (containerList.loading()) {
+        <p class="status" role="status">Loading in the background...</p>
+      }
+      @if (containerList.error(); as error) {
+        <div class="error sticky-error" role="alert">
+          <span>{{ error }}</span>
+          <button type="button" (click)="retry(containerList)">Retry</button>
+        </div>
+      }
+      @if (containerList.completed()) {
+        <p class="status" role="status">All container items are loaded.</p>
+      }
+    </div>
+  </section>
+
   <section class="example">
     <div class="example-heading">
       <div>
@@ -51,49 +95,5 @@
     @if (pageList.completed()) {
       <p class="status" role="status">All page-list items are loaded.</p>
     }
-  </section>
-
-  <section class="example">
-    <div class="example-heading">
-      <div>
-        <p class="eyebrow">Element root</p>
-        <h2>Scrollable container</h2>
-      </div>
-      <button type="button" (click)="simulateFailure(containerList)">Fail next request</button>
-    </div>
-
-    <div
-      #scrollContainer
-      class="scroll-container"
-      [sisInfiniteList]="containerList.items().length"
-      [sisInitialBatchSize]="initialBatchSize"
-      [sisBatchSize]="batchSize"
-      [sisProgressThreshold]="progressThreshold"
-      [sisLoading]="containerList.loading()"
-      [sisCompleted]="containerList.completed()"
-      [sisRequestKey]="containerList.requestKey()"
-      [sisRoot]="scrollContainer"
-      (sisLoadMore)="loadContainerItems($event)"
-    >
-      @for (item of containerList.items(); track item.id; let index = $index) {
-        <article class="compact-item" [sisInfiniteListItem]="index">
-          <span>{{ item.id }}</span>
-          <strong>{{ item.title }}</strong>
-        </article>
-      }
-
-      @if (containerList.loading()) {
-        <p class="status" role="status">Loading in the background...</p>
-      }
-      @if (containerList.error(); as error) {
-        <div class="error sticky-error" role="alert">
-          <span>{{ error }}</span>
-          <button type="button" (click)="retry(containerList)">Retry</button>
-        </div>
-      }
-      @if (containerList.completed()) {
-        <p class="status" role="status">All container items are loaded.</p>
-      }
-    </div>
   </section>
 </main>

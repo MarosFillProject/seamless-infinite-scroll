@@ -29,7 +29,7 @@ interface ListState {
 export class App {
   protected readonly initialBatchSize = 30;
   protected readonly batchSize = 20;
-  protected readonly progressThreshold = 0.5;
+  protected readonly progressThreshold = 0.2;
 
   protected readonly pageList = this.createListState();
   protected readonly containerList = this.createListState();
