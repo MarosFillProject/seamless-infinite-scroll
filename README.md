@@ -155,9 +155,10 @@ interface InfiniteScrollRequest {
 }
 ```
 
-Only one request is emitted for a given loaded item count. If a request fails and no items are
-appended, clear the application's loading state and change `sisRequestKey` to explicitly retry.
-The same reset mechanism can start a new list lifecycle after changing filters or search terms.
+Only one request is emitted for a given loaded item count within a `sisRequestKey` lifecycle. If a
+request fails and no items are appended, clear the application's loading state and change
+`sisRequestKey` to explicitly retry. The same reset mechanism can start a new list lifecycle after
+changing filters or search terms.
 
 ## Limitations
 

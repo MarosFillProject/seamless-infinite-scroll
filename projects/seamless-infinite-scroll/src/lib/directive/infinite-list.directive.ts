@@ -1,4 +1,13 @@
-import { Directive, effect, inject, input, output, PLATFORM_ID, signal } from '@angular/core';
+import {
+  DestroyRef,
+  Directive,
+  effect,
+  inject,
+  input,
+  output,
+  PLATFORM_ID,
+  signal,
+} from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 
 import { InfiniteScrollRequest, InfiniteScrollRequestKey } from '../models/infinite-scroll.models';
@@ -25,6 +34,7 @@ export class InfiniteListDirective {
 
   readonly loadMore = output<InfiniteScrollRequest>({ alias: 'sisLoadMore' });
 
+  private readonly destroyRef = inject(DestroyRef);
   private readonly observerFactory = inject(IntersectionObserverFactory);
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
   private readonly itemElements = signal<ReadonlyMap<number, Element>>(new Map());
@@ -34,6 +44,8 @@ export class InfiniteListDirective {
   private lastRequestedItemCount: number | null = null;
 
   constructor() {
+    this.destroyRef.onDestroy(() => this.disconnectObserver());
+
     effect(() => {
       const requestKey = this.requestKey();
       if (!Object.is(requestKey, this.lastRequestKey)) {
@@ -76,7 +88,9 @@ export class InfiniteListDirective {
 
       this.observer = this.observerFactory.create(
         (entries) => {
-          if (entries.some((entry) => this.hasReachedTarget(entry, target))) {
+          if (
+            entries.some((entry) => this.hasReachedTarget(entry, target, intersectionThreshold))
+          ) {
             this.emitPrefetchIfReady(itemCount, triggerIndex);
           }
         },
@@ -90,10 +104,14 @@ export class InfiniteListDirective {
     });
   }
 
-  private hasReachedTarget(entry: IntersectionObserverEntry, target: Element): boolean {
+  private hasReachedTarget(
+    entry: IntersectionObserverEntry,
+    target: Element,
+    intersectionThreshold: number,
+  ): boolean {
     return (
       entry.target === target &&
-      (entry.isIntersecting ||
+      ((entry.isIntersecting && entry.intersectionRatio >= intersectionThreshold) ||
         (entry.rootBounds !== null && entry.boundingClientRect.bottom <= entry.rootBounds.top))
     );
   }

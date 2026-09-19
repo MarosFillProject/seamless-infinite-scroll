@@ -49,6 +49,7 @@ class FakeIntersectionObserver implements IntersectionObserver {
     isIntersecting = true,
     boundingClientRect?: DOMRectReadOnly,
     rootBounds: DOMRectReadOnly | null = null,
+    intersectionRatio = isIntersecting ? 1 : 0,
   ): void {
     if (!this.observed) {
       throw new Error('No element is being observed.');
@@ -60,7 +61,7 @@ class FakeIntersectionObserver implements IntersectionObserver {
       [
         {
           boundingClientRect: targetRect,
-          intersectionRatio: isIntersecting ? 1 : 0,
+          intersectionRatio,
           intersectionRect: targetRect,
           isIntersecting,
           rootBounds,
@@ -94,6 +95,7 @@ function createRect(top: number, bottom: number): DOMRectReadOnly {
       [sisInfiniteList]="items().length"
       [sisInitialBatchSize]="initialBatchSize"
       [sisBatchSize]="batchSize"
+      [sisIntersectionThreshold]="intersectionThreshold"
       [sisLoading]="loading()"
       [sisCompleted]="completed()"
       [sisRequestKey]="requestKey()"
@@ -114,6 +116,7 @@ class TestHost {
 
   initialBatchSize = 30;
   batchSize = 20;
+  intersectionThreshold = 0;
 }
 
 describe('InfiniteListDirective', () => {
@@ -212,6 +215,16 @@ describe('InfiniteListDirective', () => {
     await fixture.whenStable();
 
     expect(FakeIntersectionObserver.latest?.observed?.textContent).toBe('31');
+
+    FakeIntersectionObserver.latest?.trigger(false, createRect(-100, -50), createRect(0, 500));
+
+    expect(fixture.componentInstance.requests.at(-1)).toEqual({
+      reason: 'prefetch',
+      requestedCount: 20,
+      loadedCount: 37,
+      triggerIndex: 31,
+    });
+    expect(fixture.componentInstance.requests).toHaveLength(3);
   });
 
   it('requests another batch when the trigger is already above the root', async () => {
@@ -250,6 +263,48 @@ describe('InfiniteListDirective', () => {
     FakeIntersectionObserver.latest?.trigger(false, createRect(550, 600), createRect(0, 500));
 
     expect(fixture.componentInstance.requests).toHaveLength(1);
+  });
+
+  it('waits for the configured intersection threshold', async () => {
+    fixture.componentInstance.intersectionThreshold = 0.75;
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    fixture.componentInstance.loading.set(true);
+    fixture.componentInstance.items.set(Array.from({ length: 30 }, (_, index) => index));
+    fixture.detectChanges();
+    fixture.componentInstance.loading.set(false);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const observer = FakeIntersectionObserver.latest;
+    expect(observer?.thresholds).toEqual([0.75]);
+
+    observer?.trigger(true, undefined, null, 0.5);
+    expect(fixture.componentInstance.requests).toHaveLength(1);
+
+    observer?.trigger(true, undefined, null, 0.75);
+    expect(fixture.componentInstance.requests).toHaveLength(2);
+  });
+
+  it('disconnects the active observer when destroyed', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    fixture.componentInstance.loading.set(true);
+    fixture.componentInstance.items.set(Array.from({ length: 30 }, (_, index) => index));
+    fixture.detectChanges();
+    fixture.componentInstance.loading.set(false);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const observer = FakeIntersectionObserver.latest;
+    expect(observer?.observed).not.toBeNull();
+
+    fixture.destroy();
+
+    expect(observer?.disconnected).toBe(true);
+    expect(observer?.observed).toBeNull();
   });
 
   it('allows an application-controlled retry when the request key changes', async () => {
