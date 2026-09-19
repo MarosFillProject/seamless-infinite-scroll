@@ -1,13 +1,4 @@
-import {
-  computed,
-  Directive,
-  effect,
-  inject,
-  input,
-  output,
-  PLATFORM_ID,
-  signal,
-} from '@angular/core';
+import { Directive, effect, inject, input, output, PLATFORM_ID, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 
 import { InfiniteScrollRequest, InfiniteScrollRequestKey } from '../models/infinite-scroll.models';
@@ -37,15 +28,6 @@ export class InfiniteListDirective {
   private readonly observerFactory = inject(IntersectionObserverFactory);
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
   private readonly itemElements = signal<ReadonlyMap<number, Element>>(new Map());
-  private readonly triggerTarget = computed(() => {
-    const itemCount = this.itemCount();
-    if (itemCount < 1) {
-      return null;
-    }
-
-    const triggerIndex = calculateTriggerIndex(itemCount, this.progressThreshold());
-    return this.itemElements().get(triggerIndex) ?? null;
-  });
 
   private observer: IntersectionObserver | null = null;
   private lastRequestKey: InfiniteScrollRequestKey = null;
@@ -64,7 +46,6 @@ export class InfiniteListDirective {
       const batchSize = this.batchSize();
       const progressThreshold = this.progressThreshold();
       const intersectionThreshold = this.intersectionThreshold();
-      const target = this.triggerTarget();
 
       this.validateConfiguration(
         itemCount,
@@ -83,14 +64,19 @@ export class InfiniteListDirective {
         this.emitRequest('initial', initialBatchSize, 0, null);
         return;
       }
-      const triggerIndex = calculateTriggerIndex(itemCount, progressThreshold);
+      const batchStartIndex =
+        this.lastRequestedItemCount !== null && this.lastRequestedItemCount < itemCount
+          ? this.lastRequestedItemCount
+          : 0;
+      const triggerIndex = calculateTriggerIndex(itemCount, batchStartIndex, progressThreshold);
+      const target = this.itemElements().get(triggerIndex) ?? null;
       if (!target) {
         return;
       }
 
       this.observer = this.observerFactory.create(
         (entries) => {
-          if (entries.some((entry) => entry.target === target && entry.isIntersecting)) {
+          if (entries.some((entry) => this.hasReachedTarget(entry, target))) {
             this.emitPrefetchIfReady(itemCount, triggerIndex);
           }
         },
@@ -102,6 +88,14 @@ export class InfiniteListDirective {
       );
       this.observer?.observe(target);
     });
+  }
+
+  private hasReachedTarget(entry: IntersectionObserverEntry, target: Element): boolean {
+    return (
+      entry.target === target &&
+      (entry.isIntersecting ||
+        (entry.rootBounds !== null && entry.boundingClientRect.bottom <= entry.rootBounds.top))
+    );
   }
 
   registerItem(index: number, element: Element): void {

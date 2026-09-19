@@ -4,9 +4,12 @@ A headless Angular library that requests the next data batch before a user reach
 infinite list.
 
 Instead of observing an end-of-list sentinel, the library observes the rendered item at a
-configurable position in the current collection. With 30 loaded items and the default `0.5`
-progress threshold, item index 15 triggers the next request. The application can therefore load
-and append data in the background while the user is still moving through existing content.
+configurable position in the latest appended batch. With an initial batch of 30 items and the
+default `0.5` progress threshold, item index 15 triggers the next request. If 20 more items are then
+appended, index 40 is the next trigger. The application can therefore load and append data in the
+background while the user is still moving through existing content. If fast scrolling has already
+moved past a newly selected trigger, the directive treats it as reached so loading continues
+without requiring the user to scroll backward.
 
 ## Architecture
 
@@ -98,6 +101,11 @@ export class ResultsComponent {
 When the list is empty, the directive emits one `initial` request with `sisInitialBatchSize`.
 Subsequent trigger items emit `prefetch` requests with `sisBatchSize`.
 
+Trigger placement uses the actual increase in `sisInfiniteList` after the previous request, not the
+requested batch size. For example, when the item count increases from 70 to 90, the default `0.5`
+threshold selects index 80 (Item 81). If the application appends fewer items than requested, the
+trigger adjusts to the midpoint of that smaller batch.
+
 ## Scrollable container
 
 Pass an element as `sisRoot` to use it as the `IntersectionObserver` root:
@@ -120,19 +128,19 @@ Without `sisRoot`, the browser viewport is used.
 
 ## Inputs
 
-| Input                      |  Default | Purpose                                                                   |
-| -------------------------- | -------: | ------------------------------------------------------------------------- |
-| `sisInfiniteList`          | required | Number of currently loaded items.                                         |
-| `sisInitialBatchSize`      |     `30` | Requested count for an empty list.                                        |
-| `sisBatchSize`             |     `30` | Requested count for subsequent prefetches.                                |
-| `sisProgressThreshold`     |    `0.5` | Collection position that triggers prefetch; greater than `0` through `1`. |
-| `sisLoading`               |  `false` | Prevents requests while an API call is active.                            |
-| `sisCompleted`             |  `false` | Permanently stops requests for the current list.                          |
-| `sisDisabled`              |  `false` | Temporarily disables requests and observation.                            |
-| `sisRoot`                  |   `null` | Scroll container element; `null` uses the viewport.                       |
-| `sisRootMargin`            |    `0px` | Native `IntersectionObserver` root margin.                                |
-| `sisIntersectionThreshold` |      `0` | Visible fraction required for the trigger item.                           |
-| `sisRequestKey`            |   `null` | Change to reset request deduplication after a failure or query change.    |
+| Input                      |  Default | Purpose                                                                |
+| -------------------------- | -------: | ---------------------------------------------------------------------- |
+| `sisInfiniteList`          | required | Number of currently loaded items.                                      |
+| `sisInitialBatchSize`      |     `30` | Requested count for an empty list.                                     |
+| `sisBatchSize`             |     `30` | Requested count for subsequent prefetches.                             |
+| `sisProgressThreshold`     |    `0.5` | Position in the latest appended batch that triggers prefetch.          |
+| `sisLoading`               |  `false` | Prevents requests while an API call is active.                         |
+| `sisCompleted`             |  `false` | Permanently stops requests for the current list.                       |
+| `sisDisabled`              |  `false` | Temporarily disables requests and observation.                         |
+| `sisRoot`                  |   `null` | Scroll container element; `null` uses the viewport.                    |
+| `sisRootMargin`            |    `0px` | Native `IntersectionObserver` root margin.                             |
+| `sisIntersectionThreshold` |      `0` | Visible fraction required for the trigger item.                        |
+| `sisRequestKey`            |   `null` | Change to reset request deduplication after a failure or query change. |
 
 ## Output
 
@@ -157,8 +165,8 @@ The same reset mechanism can start a new list lifecycle after changing filters o
   virtualization solution such as Angular CDK virtual scroll.
 - Browsers must provide `IntersectionObserver`; add a polyfill when targeting an environment that
   does not.
-- The trigger is based on item index, not scrollable pixel distance. This keeps batch timing
-  deterministic when item heights differ.
+- The trigger is based on position in the latest appended batch, not scrollable pixel distance.
+  This keeps batch timing deterministic when item heights differ.
 
 ## Development
 

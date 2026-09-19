@@ -45,20 +45,25 @@ class FakeIntersectionObserver implements IntersectionObserver {
     }
   }
 
-  trigger(isIntersecting = true): void {
+  trigger(
+    isIntersecting = true,
+    boundingClientRect?: DOMRectReadOnly,
+    rootBounds: DOMRectReadOnly | null = null,
+  ): void {
     if (!this.observed) {
       throw new Error('No element is being observed.');
     }
 
     const target = this.observed;
+    const targetRect = boundingClientRect ?? target.getBoundingClientRect();
     this.callback(
       [
         {
-          boundingClientRect: target.getBoundingClientRect(),
+          boundingClientRect: targetRect,
           intersectionRatio: isIntersecting ? 1 : 0,
-          intersectionRect: target.getBoundingClientRect(),
+          intersectionRect: targetRect,
           isIntersecting,
-          rootBounds: null,
+          rootBounds,
           target,
           time: 0,
         },
@@ -66,6 +71,20 @@ class FakeIntersectionObserver implements IntersectionObserver {
       this,
     );
   }
+}
+
+function createRect(top: number, bottom: number): DOMRectReadOnly {
+  return {
+    bottom,
+    height: bottom - top,
+    left: 0,
+    right: 100,
+    top,
+    width: 100,
+    x: 0,
+    y: top,
+    toJSON: () => ({}),
+  };
 }
 
 @Component({
@@ -159,7 +178,7 @@ describe('InfiniteListDirective', () => {
     expect(fixture.componentInstance.requests).toHaveLength(2);
   });
 
-  it('moves the trigger after the collection grows', async () => {
+  it('moves the trigger to the midpoint of the latest appended batch', async () => {
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.componentInstance.items.set(Array.from({ length: 30 }, (_, index) => index));
@@ -175,7 +194,64 @@ describe('InfiniteListDirective', () => {
     fixture.detectChanges();
     await fixture.whenStable();
 
-    expect(FakeIntersectionObserver.latest?.observed?.textContent).toBe('25');
+    expect(FakeIntersectionObserver.latest?.observed?.textContent).toBe('40');
+  });
+
+  it('uses the actual appended count when a batch is shorter than requested', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.componentInstance.items.set(Array.from({ length: 30 }, (_, index) => index));
+    fixture.detectChanges();
+    await fixture.whenStable();
+    FakeIntersectionObserver.latest?.trigger();
+
+    fixture.componentInstance.loading.set(true);
+    fixture.detectChanges();
+    fixture.componentInstance.items.set(Array.from({ length: 37 }, (_, index) => index));
+    fixture.detectChanges();
+    fixture.componentInstance.loading.set(false);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(FakeIntersectionObserver.latest?.observed?.textContent).toBe('33');
+  });
+
+  it('requests another batch when the trigger is already above the root', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    fixture.componentInstance.loading.set(true);
+    fixture.componentInstance.items.set(Array.from({ length: 30 }, (_, index) => index));
+    fixture.detectChanges();
+    fixture.componentInstance.loading.set(false);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    FakeIntersectionObserver.latest?.trigger(false, createRect(-100, -50), createRect(0, 500));
+
+    expect(fixture.componentInstance.requests.at(-1)).toEqual({
+      reason: 'prefetch',
+      requestedCount: 20,
+      loadedCount: 30,
+      triggerIndex: 15,
+    });
+    expect(fixture.componentInstance.requests).toHaveLength(2);
+  });
+
+  it('does not request another batch when the trigger is below the root', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    fixture.componentInstance.loading.set(true);
+    fixture.componentInstance.items.set(Array.from({ length: 30 }, (_, index) => index));
+    fixture.detectChanges();
+    fixture.componentInstance.loading.set(false);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    FakeIntersectionObserver.latest?.trigger(false, createRect(550, 600), createRect(0, 500));
+
+    expect(fixture.componentInstance.requests).toHaveLength(1);
   });
 
   it('allows an application-controlled retry when the request key changes', async () => {
